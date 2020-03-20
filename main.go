@@ -22,6 +22,8 @@ var (
 	noStaticLink        bool
 	preservePackageName bool
 	verbose             bool
+	exclude             string
+	kepptmp             bool
 )
 
 func main() {
@@ -34,6 +36,8 @@ func main() {
 		"no encrypted package name for go build command (works when main package has CGO code)")
 	flag.BoolVar(&verbose, "verbose", false, "verbose mode")
 	flag.StringVar(&tags, "tags", "", "tags are passed to the go compiler")
+	flag.StringVar(&exclude, "exclude", "", "exclude folder like vendor")
+	flag.BoolVar(&kepptmp, "kepptmp", false, "if keeping the temp project dir for debug purpose")
 
 	flag.Parse()
 
@@ -66,7 +70,12 @@ func obfuscate(pkgName, outPath string) bool {
 			fmt.Fprintln(os.Stderr, "Failed to create temp dir:", err)
 			return false
 		}
-		defer os.RemoveAll(newGopath)
+		defer func() {
+			if !kepptmp {
+				os.RemoveAll(newGopath)
+			}
+		}()
+
 	}
 
 	log.Println("Copying GOPATH...")
@@ -83,7 +92,11 @@ func obfuscate(pkgName, outPath string) bool {
 	} else {
 		n = []byte(customPadding)
 	}
-
+	log.Println("Obfuscating package names...")
+	if err := ObfuscatePackageNames(newGopath, n); err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to obfuscate package names:", err)
+		return false
+	}
 	log.Println("Obfuscating strings...")
 	if err := ObfuscateStrings(newGopath); err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to obfuscate strings:", err)
@@ -106,15 +119,15 @@ func obfuscate(pkgName, outPath string) bool {
 		newPkg = encryptComponents(pkgName, n)
 	}
 
-	ldflags := `-ldflags "-s -w`
+	ldflags := `-ldflags="-s -w`
 	if winHide {
 		ldflags += " -H=windowsgui"
 	}
 	if !noStaticLink {
-		ldflags += ` -extldflags '-static'`
+		ldflags += ` -extldflags='-static'`
 	}
 	ldflags += `"`
-	tagsFlag := `-tags "` + tags + `"`
+	tagsFlag := `-tags="` + tags + `"`
 
 	goCache := newGopath + "/cache"
 	os.Mkdir(goCache, 0755)

@@ -374,7 +374,10 @@ func singleRenames(multiset map[symbolRenameReq]int) []symbolRenameReq {
 // contains assembly or CGO code, neither of which are
 // supported by the refactoring API.
 func containsUnsupportedCode(dir string) bool {
-	return containsAssembly(dir) || containsCGO(dir) || strings.Contains(dir, "github.com")
+	if strings.Contains(dir, exclude) && exclude != "" {
+		return true
+	}
+	return containsAssembly(dir) || containsCGO(dir)
 }
 
 // containsAssembly checks if a source directory contains
@@ -450,7 +453,7 @@ func removeDoNotEdit(dir string) error {
 			data := make([]byte, comment.End()-comment.Pos())
 			start := int(comment.Pos())
 			end := start + len(data)
-			data = content[start:end]
+			data = content[start-1 : end]
 			commentStr := string(data)
 			if strings.Contains(commentStr, "DO NOT EDIT") {
 				commentStr = strings.Replace(commentStr, "DO NOT EDIT", "XXXXXXXXXXX", -1)

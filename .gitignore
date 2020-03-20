@@ -1,3 +1,10 @@
 # Ignore binary
 /gobfuscate
 *.exe
+out/*
+.idea/$CACHE_FILE$
+.idea/.gitignore
+.idea/gobfuscator.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml

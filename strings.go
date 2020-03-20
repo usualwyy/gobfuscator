@@ -11,13 +11,13 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 func ObfuscateStrings(gopath string) error {
 	return filepath.Walk(gopath, func(path string, info os.FileInfo, err error) error {
-		if strings.Contains(path, "github.com") {
+		if strings.Contains(path, exclude) && exclude != "" {
 			return nil
 		}
 		if err != nil {
@@ -95,7 +95,12 @@ func (s *stringObfuscator) Obfuscate() ([]byte, error) {
 		startIdx := node.Pos() - 1
 		endIdx := node.End() - 1
 		result.Write(data[lastIndex:startIdx])
-		result.Write(obfuscatedStringCode(strVal))
+		//skip empty string
+		if strVal != "" {
+			result.Write(obfuscatedStringCode(strVal))
+		} else {
+			result.Write([]byte("\"\""))
+		}
 		lastIndex = int(endIdx)
 	}
 	result.Write(data[lastIndex:])

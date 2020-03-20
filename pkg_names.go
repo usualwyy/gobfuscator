@@ -33,7 +33,7 @@ func ObfuscatePackageNames(gopath string, n NameHasher) error {
 		var gotAny bool
 		for dirPath := range resChan {
 			gotAny = true
-			if containsCGO(dirPath) || strings.Contains(dirPath, "github.com")  {
+			if containsCGO(dirPath) {
 				continue
 			}
 			isMain := isMainPackage(dirPath)
@@ -46,8 +46,11 @@ func ObfuscatePackageNames(gopath string, n NameHasher) error {
 			if err != nil {
 				return err
 			}
-			if err := rename.Move(&ctx, srcPkg, dstPkg, ""); err != nil {
-				return fmt.Errorf("package move: %s", err)
+			if srcPkg != dstPkg {
+				fmt.Printf("move from %s to %s\n", dirPath, encPath)
+				if err := rename.Move(&ctx, srcPkg, dstPkg, ""); err != nil {
+					return fmt.Errorf("package move: %s", err)
+				}
 			}
 			if isMain {
 				if err := makeMainPackage(encPath); err != nil {
@@ -88,7 +91,10 @@ func scanLevel(dir string, depth int, res chan<- string, done <-chan struct{}) {
 
 func encryptPackageName(dir string, p NameHasher) string {
 	subDir, base := filepath.Split(dir)
-	return filepath.Join(subDir, p.Hash(base))
+	if exclude != "" && base != exclude && !strings.Contains(subDir, exclude) {
+		base = p.Hash(base)
+	}
+	return filepath.Join(subDir, base)
 }
 
 func isMainPackage(dir string) bool {
